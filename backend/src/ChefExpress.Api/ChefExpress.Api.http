@@ -1,0 +1,7 @@
+@api = http://localhost:5094
+
+### API está no ar?
+GET {{api}}/health/live
+
+### API consegue falar com o MariaDB?
+GET {{api}}/health/ready

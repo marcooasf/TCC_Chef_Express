@@ -1,0 +1,28 @@
+# ---- .NET ----
+bin/
+obj/
+*.user
+*.suo
+*.rsuser
+.vs/
+*.trx
+TestResults/
+coverage*/
+
+# ---- Node / Angular ----
+node_modules/
+dist/
+.angular/
+npm-debug.log*
+
+# ---- IDEs / SO ----
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+
+# ---- Segredos ----
+.env
+*.env.local
+appsettings.*.local.json

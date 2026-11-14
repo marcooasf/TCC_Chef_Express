@@ -1,0 +1,51 @@
+# Ambiente de desenvolvimento completo.
+#   docker compose up -d db         -> só o banco (para rodar a API com `dotnet run`)
+#   docker compose up -d --build    -> banco + API
+name: chefexpress
+
+services:
+  db:
+    image: mariadb:11.8
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      MARIADB_DATABASE: ${DB_NAME:-chefexpress}
+      MARIADB_USER: ${DB_USER:-chefexpress}
+      MARIADB_PASSWORD: ${DB_PASSWORD:-chefexpress}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  api:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development   # habilita /scalar e /openapi
+      ConnectionStrings__Default: "Server=db;Port=3306;Database=${DB_NAME:-chefexpress};User=${DB_USER:-chefexpress};Password=${DB_PASSWORD:-chefexpress};"
+      Database__ApplyMigrationsOnStartup: "true"
+      Cors__AllowedOrigins__0: ${CORS_ORIGIN:-http://localhost:4200}
+    ports:
+      - "${API_PORT:-5094}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ---- Front-end (Angular) — ativar quando o projeto existir em ./frontend ----
+  # web:
+  #   build:
+  #     context: ./frontend
+  #   ports:
+  #     - "${WEB_PORT:-4200}:80"
+  #   depends_on:
+  #     - api
+
+volumes:
+  db-data:
