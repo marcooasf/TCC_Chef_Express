@@ -9,6 +9,11 @@ TCC Devs2Blu. Plataforma que conecta clientes a profissionais de gastronomia aut
 | Front-end  | Angular                                               | [`frontend/`](frontend/)   | ⏳ a criar          |
 | Infra      | Docker Compose + GitHub Actions (K8s planejado)       | [`infra/`](infra/)         | 🟡 parcial          |
 
+## Fluxo de trabalho
+
+- `main` recebe apenas código revisado, via Pull Request.
+- Cada integrante trabalha em uma branch própria (ex.: `gabriel/backend-foundation`) e abre um PR para a `main`.
+
 ---
 
 ## Como rodar
