@@ -6,7 +6,9 @@ public enum ErrorType
     Unauthorized,
     Forbidden,
     NotFound,
-    Conflict
+    Conflict,
+    /// <summary>An external dependency (e.g. the map service) is down: HTTP 503.</summary>
+    Unavailable
 }
 
 /// <param name="Code">Stable machine-readable code (e.g. "Profile.NotFound") for the front-end.</param>

@@ -120,8 +120,55 @@ Por que assim:
 | `professional_skills`   | N:N entre profissionais e habilidades                                    |
 | `available_dates`       | Agenda: um registro por dia livre, com `IsBooked` para o bloqueio após pagamento |
 
+A migration `AddProfileLocation` adiciona `Latitude`/`Longitude` (opcionais, com índice) em `professional_profiles`.
+
 Senha e perfil (Cliente/Profissional) **não** estão na tabela `users` ainda: entram com a tarefa 4 (autenticação), em uma migration própria.
 Os índices para a busca com filtros (tarefa 9) — cidade/UF, preço e data — já estão criados.
+
+---
+
+## Geolocalização e proximidade (OpenStreetMap)
+
+Cada perfil profissional guarda uma **localização aproximada** (centro do bairro ou da cidade) para a busca
+"profissionais perto de mim". As coordenadas vêm do [Nominatim](https://nominatim.org/) (OpenStreetMap).
+
+**Como funciona**
+
+1. Ao salvar o perfil, `profile.UpdateAddress(cidade, uf, bairro)` devolve `true` se o endereço mudou
+   (e já limpa a localização antiga).
+2. Nesse caso, chame `IProfileLocationService.RefreshLocationAsync(profile)`, que:
+   - busca a **cidade** (busca estruturada `city=` + `state=`);
+   - se houver bairro, busca o **bairro dentro dos limites da cidade** (ruas nunca casam). Se não achar, usa o centro da cidade;
+   - grava as coordenadas **arredondadas a 3 casas (~110 m)**, nunca um endereço exato (LGPD).
+3. Depois, `unitOfWork.SaveChangesAsync()`. **Se o mapa falhar, salve o perfil mesmo assim**: ele fica sem
+   coordenadas e a busca usa o filtro de cidade/UF. O `Result` traz `Geocoding.NotFound` (404) ou
+   `Geocoding.Unavailable` (503), caso queira avisar o usuário.
+
+**Busca (tarefa 9)**: `ProximityQueryExtensions` (em `Infrastructure/Persistence/Queries`), tudo em SQL:
+
+```csharp
+var origem = new GeoPoint(lat, lon);                 // geolocalização do navegador
+var perfis = await db.ProfessionalProfiles
+    .WithinRadius(origem, raioKm)                    // caixa (usa índice) + distância exata (haversine)
+    .OrderByDistanceFrom(origem)
+    .ToListAsync(ct);
+var km = origem.DistanceKmTo(perfil.Location!.Value); // "~3 km de você"
+```
+
+**Regras de uso do servidor público** ([política](https://operations.osmfoundation.org/policies/nominatim/)), já tratadas no código:
+no máximo **1 requisição/s** (limitador global), `User-Agent` identificando o app, **cache** das respostas
+(7 dias; "não encontrado": 1 h), *retry*/*timeout*/*circuit breaker* (`Microsoft.Extensions.Http.Resilience`).
+Nada de geocodificação em massa: só chamamos ao salvar um perfil, nunca durante a busca.
+
+**Configuração** (seção `Geocoding` do `appsettings.json`, ou variáveis `Geocoding__*`):
+
+| Chave                  | Padrão                                  | Para quê |
+|------------------------|-----------------------------------------|----------|
+| `Enabled`              | `true`                                  | `false` desliga as chamadas (perfis ficam sem coordenadas) |
+| `BaseUrl`              | `https://nominatim.openstreetmap.org/`  | Trocar por um Nominatim próprio (Docker) |
+| `UserAgent`            | `ChefExpress/1.0 (TCC Devs2Blu)`        | Identificação exigida pela política |
+| `ContactEmail`         | vazio                                   | E-mail da equipe enviado como `email=` (recomendado) |
+| `MaxRequestsPerSecond` | `1`                                     | `0` = sem limite (só para servidor próprio) |
 
 ---
 

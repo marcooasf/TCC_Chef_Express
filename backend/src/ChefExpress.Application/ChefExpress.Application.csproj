@@ -7,4 +7,8 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.15" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="ChefExpress.UnitTests" />
+  </ItemGroup>
+
 </Project>

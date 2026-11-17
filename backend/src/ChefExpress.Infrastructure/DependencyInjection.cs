@@ -1,4 +1,5 @@
 using ChefExpress.Application.Abstractions.Persistence;
+using ChefExpress.Infrastructure.Geocoding;
 using ChefExpress.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -27,6 +28,8 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AppDbContext>());
         // Repositories (one per module) are registered here, e.g.:
         // services.AddScoped<IProfessionalProfileRepository, ProfessionalProfileRepository>();
+
+        services.AddGeocoding(configuration);
 
         services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database", tags: ["ready"]);
 

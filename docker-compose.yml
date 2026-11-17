@@ -32,6 +32,8 @@ services:
       ConnectionStrings__Default: "Server=db;Port=3306;Database=${DB_NAME:-chefexpress};User=${DB_USER:-chefexpress};Password=${DB_PASSWORD:-chefexpress};"
       Database__ApplyMigrationsOnStartup: "true"
       Cors__AllowedOrigins__0: ${CORS_ORIGIN:-http://localhost:4200}
+      Geocoding__Enabled: ${GEOCODING_ENABLED:-true}
+      Geocoding__ContactEmail: ${GEOCODING_CONTACT_EMAIL:-}
     ports:
       - "${API_PORT:-5094}:8080"
     depends_on:

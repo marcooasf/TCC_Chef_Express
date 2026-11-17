@@ -69,6 +69,12 @@ namespace ChefExpress.Infrastructure.Persistence.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("varchar(2000)");
 
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("double");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("double");
+
                     b.Property<string>("Neighborhood")
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
@@ -90,6 +96,8 @@ namespace ChefExpress.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("UserId")
                         .IsUnique();
+
+                    b.HasIndex("Latitude", "Longitude");
 
                     b.HasIndex("State", "City");
 

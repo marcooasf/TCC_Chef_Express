@@ -1,4 +1,5 @@
 using ChefExpress.Domain.Common;
+using ChefExpress.Domain.Geography;
 using ChefExpress.Domain.Users;
 
 namespace ChefExpress.Domain.Professionals;
@@ -21,6 +22,24 @@ public sealed class ProfessionalProfile : Entity
     public decimal BasePrice { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
+    /// <summary>
+    /// Approximate location used for proximity search: the centre of the neighbourhood or city
+    /// returned by OpenStreetMap, never a street address (LGPD). Null while not geocoded, or when
+    /// the lookup failed; the search then falls back to the city/state filter.
+    /// </summary>
+    public double? Latitude { get; private set; }
+
+    /// <inheritdoc cref="Latitude"/>
+    public double? Longitude { get; private set; }
+
+    /// <summary>Stored coordinates are rounded to 3 decimals (about 110 m).</summary>
+    public const int LocationDecimals = 3;
+
+    public GeoPoint? Location =>
+        Latitude is { } lat && Longitude is { } lon ? new GeoPoint(lat, lon) : null;
+
+    public bool HasAddress => !string.IsNullOrWhiteSpace(City) && BrazilianStates.IsValid(State);
+
     public ICollection<Skill> Skills { get; private set; } = [];
     public ICollection<AvailableDate> AvailableDates { get; private set; } = [];
 
@@ -28,6 +47,53 @@ public sealed class ProfessionalProfile : Entity
 
     public static ProfessionalProfile CreateFor(User user) =>
         new() { UserId = user.Id, User = user, UpdatedAt = DateTime.UtcNow };
+
+    /// <summary>
+    /// Sets city, UF and optional neighbourhood. If the address really changed (case-insensitive),
+    /// the stored location is cleared so it is never stale; geocode again afterwards
+    /// (<c>IProfileLocationService</c>). Returns whether the address changed.
+    /// </summary>
+    public bool UpdateAddress(string city, string state, string? neighborhood)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(city);
+        if (!BrazilianStates.IsValid(state))
+            throw new ArgumentException($"'{state}' is not a valid Brazilian state (UF).", nameof(state));
+
+        city = city.Trim();
+        state = state.Trim().ToUpperInvariant();
+        neighborhood = string.IsNullOrWhiteSpace(neighborhood) ? null : neighborhood.Trim();
+
+        var changed =
+            !string.Equals(City, city, StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(State, state, StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(Neighborhood, neighborhood, StringComparison.OrdinalIgnoreCase);
+
+        City = city;
+        State = state;
+        Neighborhood = neighborhood;
+
+        if (changed)
+            ClearLocation();
+        else
+            Touch();
+
+        return changed;
+    }
+
+    public void SetLocation(GeoPoint point)
+    {
+        var rounded = point.Round(LocationDecimals);
+        Latitude = rounded.Latitude;
+        Longitude = rounded.Longitude;
+        Touch();
+    }
+
+    public void ClearLocation()
+    {
+        Latitude = null;
+        Longitude = null;
+        Touch();
+    }
 
     public AvailableDate AddAvailableDate(DateOnly date)
     {

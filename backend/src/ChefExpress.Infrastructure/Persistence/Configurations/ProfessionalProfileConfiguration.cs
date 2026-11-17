@@ -23,6 +23,10 @@ internal sealed class ProfessionalProfileConfiguration : IEntityTypeConfiguratio
         builder.HasIndex(p => new { p.State, p.City });
         builder.HasIndex(p => p.BasePrice);
 
+        // Proximity search: bounding-box pre-filter (see ProximityQueryExtensions)
+        builder.Ignore(p => p.Location);
+        builder.HasIndex(p => new { p.Latitude, p.Longitude });
+
         builder.HasMany(p => p.Skills)
             .WithMany(s => s.Professionals)
             .UsingEntity(
