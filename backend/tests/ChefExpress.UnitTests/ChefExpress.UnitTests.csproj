@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <IsPackable>false</IsPackable>
@@ -17,6 +17,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ChefExpress.Domain\ChefExpress.Domain.csproj" />
+    <ProjectReference Include="..\..\src\ChefExpress.Application\ChefExpress.Application.csproj" />
+    <ProjectReference Include="..\..\src\ChefExpress.Infrastructure\ChefExpress.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

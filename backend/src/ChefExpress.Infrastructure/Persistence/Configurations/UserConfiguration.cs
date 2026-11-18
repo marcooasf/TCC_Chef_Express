@@ -16,6 +16,13 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.HasIndex(u => u.Email).IsUnique();
         builder.Property(u => u.CreatedAt).IsRequired();
 
+        // Identity's V3 hash is ~84 chars in Base64; leave room for future formats.
+        builder.Property(u => u.PasswordHash).HasMaxLength(256).IsRequired();
+        builder.Property(u => u.Role)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .IsRequired();
+
         builder.HasOne(u => u.ProfessionalProfile)
             .WithOne(p => p.User)
             .HasForeignKey<Domain.Professionals.ProfessionalProfile>(p => p.UserId)

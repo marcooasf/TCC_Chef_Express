@@ -1,8 +1,12 @@
+using ChefExpress.Application.Abstractions.Authentication;
 using ChefExpress.Application.Abstractions.Persistence;
+using ChefExpress.Infrastructure.Authentication;
 using ChefExpress.Infrastructure.Persistence;
+using ChefExpress.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -25,8 +29,16 @@ public static class DependencyInjection
                 mysql => mysql.EnableRetryOnFailure(maxRetryCount: 5)));
 
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AppDbContext>());
-        // Repositories (one per module) are registered here, e.g.:
-        // services.AddScoped<IProfessionalProfileRepository, ProfessionalProfileRepository>();
+        // Repositories (one per module)
+        services.AddScoped<IUserRepository, UserRepository>();
+
+        // Authentication adapters
+        var jwtOptions = configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
+        jwtOptions.EnsureValid();
+        services.AddSingleton(jwtOptions);
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton<ITokenService, JwtTokenService>();
+        services.AddSingleton<IPasswordHasher, PasswordHasher>();
 
         services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database", tags: ["ready"]);
 

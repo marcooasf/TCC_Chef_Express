@@ -5,3 +5,29 @@ GET {{api}}/health/live
 
 ### API consegue falar com o MariaDB?
 GET {{api}}/health/ready
+
+### Cadastro (role: Client ou Professional)
+# @name register
+POST {{api}}/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Maria Silva",
+  "email": "maria@example.com",
+  "password": "senhaSegura1",
+  "role": "Client"
+}
+
+### Login
+# @name login
+POST {{api}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "maria@example.com",
+  "password": "senhaSegura1"
+}
+
+### Usuário logado (usa o token do login acima)
+GET {{api}}/api/auth/me
+Authorization: Bearer {{login.response.body.accessToken}}

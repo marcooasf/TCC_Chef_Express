@@ -4,7 +4,7 @@ TCC Devs2Blu. Plataforma que conecta clientes a profissionais de gastronomia aut
 
 | Camada     | Tecnologia                                            | Pasta                      | Status              |
 |------------|-------------------------------------------------------|----------------------------|---------------------|
-| Back-end   | C# / .NET 10 (API REST) + EF Core 9 (Pomelo)          | [`backend/`](backend/)     | 🟡 fundação pronta  |
+| Back-end   | C# / .NET 10 (API REST) + EF Core 9 (Pomelo)          | [`backend/`](backend/)     | 🟡 fundação + login |
 | Banco      | MariaDB 11.8                                          | `docker-compose.yml`       | ✅                  |
 | Front-end  | Angular                                               | [`frontend/`](frontend/)   | ⏳ a criar          |
 | Infra      | Docker Compose + GitHub Actions (K8s planejado)       | [`infra/`](infra/)         | 🟡 parcial          |
@@ -110,17 +110,16 @@ Por que assim:
 
 ---
 
-## Banco de dados (migration `InitialCreate`)
+## Banco de dados (migrations `InitialCreate` e `AddUserAuthentication`)
 
 | Tabela                  | Conteúdo                                                                 |
 |-------------------------|--------------------------------------------------------------------------|
-| `users`                 | Nome, e-mail (único), data de criação                                    |
+| `users`                 | Nome, e-mail (único), hash da senha, perfil (`Client`/`Professional`), data de criação |
 | `professional_profiles` | 1:1 com usuário — descrição, cidade/UF, bairro (opcional), preço base    |
 | `skills`                | Habilidades gastronômicas (lista inicial já inserida pela migration)     |
 | `professional_skills`   | N:N entre profissionais e habilidades                                    |
 | `available_dates`       | Agenda: um registro por dia livre, com `IsBooked` para o bloqueio após pagamento |
 
-Senha e perfil (Cliente/Profissional) **não** estão na tabela `users` ainda: entram com a tarefa 4 (autenticação), em uma migration própria.
 Os índices para a busca com filtros (tarefa 9) — cidade/UF, preço e data — já estão criados.
 
 ---
@@ -132,6 +131,11 @@ Os índices para a busca com filtros (tarefa 9) — cidade/UF, preço e data —
 | GET    | `/health/live`  | A API está no ar                     |
 | GET    | `/health/ready` | A API consegue falar com o MariaDB   |
 | GET    | `/scalar`       | Documentação interativa (só em dev)  |
+| POST   | `/api/auth/register` | Cadastro (Cliente ou Profissional); já devolve o token |
+| POST   | `/api/auth/login`    | Login com e-mail e senha                               |
+| GET    | `/api/auth/me`       | Usuário logado (exige `Authorization: Bearer <token>`) |
+
+Exemplos prontos em `backend/src/ChefExpress.Api/ChefExpress.Api.http`.
 
 **CORS:** liberado para `http://localhost:4200` (configurável em `Cors:AllowedOrigins`).
 
@@ -144,14 +148,21 @@ Os índices para a busca com filtros (tarefa 9) — cidade/UF, preço e data —
 | 1 | Projeto Back-end (C#) e conexão com MariaDB | Gabriel       | ✅     |
 | 2 | Tabelas iniciais via migrations             | Gabriel       | ✅     |
 | 3 | Projeto Front-end (Angular)                 | Lucas         | ⏳     |
-| 4 | Cadastro e Login no Back-end                | Marco         | ⏳     |
+| 4 | Cadastro e Login no Back-end                | Marco         | ✅     |
 | 5 | Telas de Cadastro e Login (Angular) + integração | Lucas / Marco | ⏳ |
 
-### Notas para a tarefa 4 (autenticação)
+### Autenticação (tarefa 4) — como usar
 
-- Adicionar à entidade `User` os campos de senha (hash) e perfil (Cliente/Profissional) e gerar uma nova migration.
-- Registrar autenticação/autorização em `Api/Extensions/ServiceCollectionExtensions.cs` e os middlewares em `Program.cs` (há um comentário marcando o lugar, depois do `UseCors`).
-- Para profissionais, `ProfessionalProfile.CreateFor(user)` cria o perfil vazio que será preenchido na tela "Meu Perfil e Agenda".
+- **JWT (Bearer), sem estado.** `register` e `login` devolvem `{ accessToken, expiresAt, user }`.
+  O Angular guarda o token e envia `Authorization: Bearer <token>`; `GET /api/auth/me` restaura a sessão.
+- **Proteger um endpoint:** `[Authorize]`, ou só para um perfil: `[Authorize(Roles = nameof(UserRole.Professional))]`.
+  O id do usuário vem da claim `sub` (`AuthClaims.UserId`).
+- **Senha:** mínimo 8 caracteres, com letras e números; guardada com o hasher do ASP.NET Core Identity (PBKDF2 + salt).
+- **Erros** (campo `code`): `Validation` (400, com `errors` por campo), `Auth.EmailAlreadyInUse` (409),
+  `Auth.InvalidCredentials` (401 — mesma mensagem para e-mail inexistente e senha errada).
+- **Profissional:** o cadastro já cria o `ProfessionalProfile` vazio, preenchido depois na tela "Meu Perfil e Agenda".
+- **Chave de assinatura:** `Jwt:Key` (mínimo 32 bytes). Em dev já vem configurada; fora de dev, defina `Jwt__Key`
+  (no Docker: `JWT_KEY` no `.env`). Sem chave válida a API não sobe.
 
 ## Pontos ainda em aberto (`[A VERIFICAR]` no planejamento)
 

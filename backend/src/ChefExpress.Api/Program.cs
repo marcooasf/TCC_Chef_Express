@@ -25,7 +25,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors(ServiceCollectionExtensions.FrontendCorsPolicy);
-// Authentication/authorization middleware: added by the auth task (task 4).
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 

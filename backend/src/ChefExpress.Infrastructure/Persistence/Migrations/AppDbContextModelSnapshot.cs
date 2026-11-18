@@ -160,6 +160,16 @@ namespace ChefExpress.Infrastructure.Persistence.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("varchar(120)");
 
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
